@@ -7,6 +7,7 @@ import android.os.Looper
 import android.os.VibrationEffect
 import android.os.VibratorManager
 import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityNodeInfo
 import java.time.LocalDate
 
 internal fun readToday(prefs: SharedPreferences): Int =
@@ -56,7 +57,33 @@ class ShortsService : AccessibilityService() {
             .filter { it.isVisibleToUser }
             .mapNotNull { (it.text ?: it.contentDescription)?.toString()?.trim()?.takeIf(String::isNotEmpty) }
             .distinct()
-        return titles.singleOrNull()?.hashCode()
+        titles.singleOrNull()?.let { return it.hashCode() }
+
+        // Some YouTube versions expose creator and caption as virtual footer nodes.
+        val footer = root.findAccessibilityNodeInfosByViewId("$YOUTUBE:id/reel_player_footer_container")
+            .filter { it.isVisibleToUser }.singleOrNull() ?: return null
+        val labels = footer.visibleLabels()
+        val creator = labels.indexOfFirst { it.startsWith("Go to channel @", ignoreCase = true) }
+        if (creator < 0) return null
+        val caption = labels.drop(creator + 1).firstOrNull {
+            it.length >= 8 && excludedCaptionPrefixes.none { prefix -> it.startsWith(prefix, ignoreCase = true) }
+        } ?: return null
+        return (labels[creator] + "|" + caption).hashCode()
+    }
+
+    private fun AccessibilityNodeInfo.visibleLabels(): List<String> = buildList {
+        val stack = ArrayDeque<AccessibilityNodeInfo>()
+        stack.add(this@visibleLabels)
+        var visited = 0
+        while (stack.isNotEmpty() && visited++ < 300) {
+            val node = stack.removeLast()
+            if (!node.isVisibleToUser) continue
+            (node.text ?: node.contentDescription)?.toString()?.trim()
+                ?.takeIf(String::isNotEmpty)?.let { add(it) }
+            for (index in node.childCount - 1 downTo 0) {
+                node.getChild(index)?.let { stack.add(it) }
+            }
+        }
     }
 
     override fun onInterrupt() { cancelPending(); lastCandidate = null }
@@ -67,5 +94,11 @@ class ShortsService : AccessibilityService() {
         pending = null
     }
 
-    private companion object { const val YOUTUBE = "com.google.android.youtube" }
+    private companion object {
+        const val YOUTUBE = "com.google.android.youtube"
+        val excludedCaptionPrefixes = listOf(
+            "Subscribe", "Unsubscribe", "See more videos", "Use this sound",
+            "Share this", "View ", "Like this", "Dislike", "Video progress"
+        )
+    }
 }
