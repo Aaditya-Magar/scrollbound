@@ -16,6 +16,7 @@ class ShortsService : AccessibilityService() {
     private val prefs by lazy { getSharedPreferences("scrollbound", MODE_PRIVATE) }
     private val handler = Handler(Looper.getMainLooper())
     private var lastCandidate: Int? = null
+    private var lastCounted: Int? = null
     private var pending: Runnable? = null
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -26,10 +27,13 @@ class ShortsService : AccessibilityService() {
         lastCandidate = current
         if (current == null) return
         val confirm = Runnable {
+            pending = null
             if (candidate() != current) {
                 lastCandidate = null
                 return@Runnable
             }
+            if (current == lastCounted) return@Runnable
+            lastCounted = current
             val key = "count.${LocalDate.now()}"
             val count = prefs.getInt(key, 0) + 1
             prefs.edit().putInt(key, count).apply()
