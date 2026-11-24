@@ -72,86 +72,88 @@ class MainActivity : ComponentActivity() {
                 BackHandler(!finished && page > 0) { page--; prefs.edit().putInt("step", page).apply() }
                 val scroll = rememberScrollState()
                 LaunchedEffect(page, finished) { scroll.scrollTo(0) }
-                Column(
-                    Modifier.fillMaxSize().background(Ink).safeDrawingPadding().verticalScroll(scroll).padding(26.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Text("Scrollbound", color = Mint, style = MaterialTheme.typography.titleMedium)
-                    if (finished) {
-                        Text("Today", style = MaterialTheme.typography.displaySmall)
-                        Text("$count", color = Mint, style = MaterialTheme.typography.displayLarge)
-                        Text("Shorts watched · $cap daily cap")
-                        LinearProgressIndicator(progress = { (count.toFloat() / cap).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
-                        Text(if (tracking) "Shorts tracking enabled" else "Shorts tracking paused")
-                        if (!tracking) OutlinedButton(onClick = { page = 9; finished = false }) { Text("Connect tracking") }
-                        Text("Daily limit", style = MaterialTheme.typography.titleMedium)
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            for (choice in listOf(25, 50, 100, 150)) {
-                                FilterChip(selected = cap == choice, onClick = {
-                                    cap = choice
-                                    prefs.edit().putInt("limit", cap).putString("answer.7", "$cap").apply()
-                                    pulse()
-                                }, label = { Text("$choice") })
+                CompositionLocalProvider(LocalContentColor provides Paper) {
+                    Column(
+                        Modifier.fillMaxSize().background(Ink).safeDrawingPadding().verticalScroll(scroll).padding(26.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Text("Scrollbound", color = Mint, style = MaterialTheme.typography.titleMedium)
+                        if (finished) {
+                            Text("Today", style = MaterialTheme.typography.displaySmall)
+                            Text("$count", color = Mint, style = MaterialTheme.typography.displayLarge)
+                            Text("Shorts watched · $cap daily cap")
+                            LinearProgressIndicator(progress = { (count.toFloat() / cap).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
+                            Text(if (tracking) "Shorts tracking enabled" else "Shorts tracking paused")
+                            if (!tracking) OutlinedButton(onClick = { page = 9; finished = false }) { Text("Connect tracking") }
+                            Text("Daily limit", style = MaterialTheme.typography.titleMedium)
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                for (choice in listOf(25, 50, 100, 150)) {
+                                    FilterChip(selected = cap == choice, onClick = {
+                                        cap = choice
+                                        prefs.edit().putInt("limit", cap).putString("answer.7", "$cap").apply()
+                                        pulse()
+                                    }, label = { Text("$choice") })
+                                }
                             }
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                            Text("Vibration")
-                            Switch(checked = haptics, onCheckedChange = {
-                                haptics = it
-                                prefs.edit().putBoolean("haptics", it).apply()
-                                if (it) pulse()
-                            })
-                        }
-                        TextButton(onClick = { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }) { Text("Android tracking settings") }
-                        return@Column
-                    }
-                    LinearProgressIndicator(progress = { (page + 1f) / steps.size }, modifier = Modifier.fillMaxWidth())
-                    val step = steps[page]
-                    Text(step.title, style = MaterialTheme.typography.headlineLarge)
-                    Text(step.hint, style = MaterialTheme.typography.bodyLarge)
-                    for (label in step.options) {
-                        FilterChip(selected = selected == label, onClick = {
-                            selected = label
-                            prefs.edit().putString("answer.$page", label).apply()
-                            pulse()
-                        }, label = { Text(label) }, modifier = Modifier.fillMaxWidth())
-                    }
-                    if (page == 8) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                            Text("Vibration")
-                            Switch(checked = haptics, onCheckedChange = {
-                                haptics = it
-                                prefs.edit().putBoolean("haptics", it).apply()
-                                if (it) pulse()
-                            })
-                        }
-                        OutlinedButton(enabled = haptics, onClick = { pulse(true) }) { Text("Preview limit feedback") }
-                    }
-                    if (page == 9) {
-                        Button(onClick = {
-                            pulse()
-                            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-                        }, modifier = Modifier.fillMaxWidth()) { Text(if (tracking) "Open Android settings" else "I agree · Open Android settings") }
-                    }
-                    Button(
-                        onClick = {
-                            if (page == 7) {
-                                cap = selected?.toIntOrNull() ?: 50
-                                prefs.edit().putInt("limit", cap).apply()
+                            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                Text("Vibration")
+                                Switch(checked = haptics, onCheckedChange = {
+                                    haptics = it
+                                    prefs.edit().putBoolean("haptics", it).apply()
+                                    if (it) pulse()
+                                })
                             }
-                            pulse(page == steps.lastIndex)
-                            if (page == steps.lastIndex) {
-                                finished = true
-                                prefs.edit().putBoolean("setup", true).apply()
-                            } else {
-                                page++
-                                prefs.edit().putInt("step", page).apply()
+                            TextButton(onClick = { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }) { Text("Android tracking settings") }
+                            return@Column
+                        }
+                        LinearProgressIndicator(progress = { (page + 1f) / steps.size }, modifier = Modifier.fillMaxWidth())
+                        val step = steps[page]
+                        Text(step.title, style = MaterialTheme.typography.headlineLarge)
+                        Text(step.hint, style = MaterialTheme.typography.bodyLarge)
+                        for (label in step.options) {
+                            FilterChip(selected = selected == label, onClick = {
+                                selected = label
+                                prefs.edit().putString("answer.$page", label).apply()
+                                pulse()
+                            }, label = { Text(label) }, modifier = Modifier.fillMaxWidth())
+                        }
+                        if (page == 8) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                Text("Vibration")
+                                Switch(checked = haptics, onCheckedChange = {
+                                    haptics = it
+                                    prefs.edit().putBoolean("haptics", it).apply()
+                                    if (it) pulse()
+                                })
                             }
-                        },
-                        enabled = step.options.isEmpty() || selected != null,
-                        modifier = Modifier.fillMaxWidth()
-                    ) { Text(when (page) { 9 -> if (tracking) "Continue" else "Set up later"; steps.lastIndex -> "Open Today"; else -> "Continue" }) }
-                    if (page > 0) TextButton(onClick = { page--; prefs.edit().putInt("step", page).apply() }) { Text("Back") }
+                            OutlinedButton(enabled = haptics, onClick = { pulse(true) }) { Text("Preview limit feedback") }
+                        }
+                        if (page == 9) {
+                            Button(onClick = {
+                                pulse()
+                                startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                            }, modifier = Modifier.fillMaxWidth()) { Text(if (tracking) "Open Android settings" else "I agree · Open Android settings") }
+                        }
+                        Button(
+                            onClick = {
+                                if (page == 7) {
+                                    cap = selected?.toIntOrNull() ?: 50
+                                    prefs.edit().putInt("limit", cap).apply()
+                                }
+                                pulse(page == steps.lastIndex)
+                                if (page == steps.lastIndex) {
+                                    finished = true
+                                    prefs.edit().putBoolean("setup", true).apply()
+                                } else {
+                                    page++
+                                    prefs.edit().putInt("step", page).apply()
+                                }
+                            },
+                            enabled = step.options.isEmpty() || selected != null,
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text(when (page) { 9 -> if (tracking) "Continue" else "Set up later"; steps.lastIndex -> "Open Today"; else -> "Continue" }) }
+                        if (page > 0) TextButton(onClick = { page--; prefs.edit().putInt("step", page).apply() }) { Text("Back") }
+                    }
                 }
             }
         }
