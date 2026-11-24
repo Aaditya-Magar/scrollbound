@@ -1,6 +1,7 @@
 package org.scrollbound.app
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.VibratorManager
@@ -44,6 +45,7 @@ class MainActivity : ComponentActivity() {
     private val prefs by lazy { getSharedPreferences("scrollbound", MODE_PRIVATE) }
     private var tracking by mutableStateOf(false)
     private var count by mutableIntStateOf(0)
+    private var previewUnavailable by mutableStateOf(false)
 
     override fun onResume() {
         super.onResume()
@@ -133,6 +135,19 @@ class MainActivity : ComponentActivity() {
                                 pulse()
                                 startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                             }, modifier = Modifier.fillMaxWidth()) { Text(if (tracking) "Open Android settings" else "I agree · Open Android settings") }
+                        }
+                        if (page == steps.lastIndex && tracking) {
+                            Text(if (count > 0) "Tracking confirmed · $count counted today" else "Waiting for the first Short")
+                            OutlinedButton(onClick = {
+                                val shorts = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/shorts/"))
+                                    .setPackage("com.google.android.youtube")
+                                try {
+                                    startActivity(shorts)
+                                } catch (_: android.content.ActivityNotFoundException) {
+                                    previewUnavailable = true
+                                }
+                            }, modifier = Modifier.fillMaxWidth()) { Text("Try YouTube Shorts") }
+                            if (previewUnavailable) Text("YouTube is unavailable on this device.")
                         }
                         Button(
                             onClick = {
